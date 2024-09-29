@@ -7,6 +7,9 @@
 #include <string_view>
 #include <variant>
 #include <vector>
+#include <unordered_set>
+#include <optional>
+#include <cassert>
 
 // Позиция ячейки. Индексация с нуля.
 struct Position {
@@ -26,6 +29,14 @@ struct Position {
     static const Position NONE;
 };
 
+struct PositionHasher {
+    size_t operator()(const Position& pos) const {
+        return std::hash<int>()(pos.row) ^ (std::hash<int>()(pos.col) << 1); 
+    }
+};
+
+using Positions = std::unordered_set<Position, PositionHasher>;
+
 struct Size {
     int rows = 0;
     int cols = 0;
@@ -39,7 +50,7 @@ public:
     enum class Category {
         Ref,    // ссылка на ячейку с некорректной позицией
         Value,  // ячейка не может быть трактована как число
-        Div0,  // в результате вычисления возникло деление на ноль
+        Arithmetic,  // в результате вычисления возникло деление на ноль
     };
 
     FormulaError(Category category);
