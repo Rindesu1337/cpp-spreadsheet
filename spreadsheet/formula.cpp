@@ -69,9 +69,9 @@ public:
   std::vector<Position> GetReferencedCells() const override {
     std::vector<Position> result;
     std::set<Position> set_of_pos;
-    for (const auto &cell : ast_.GetCells()) {
-      if (cell.IsValid()) {
-        set_of_pos.insert(cell);
+    for (const auto &pos : ast_.GetCells()) {
+      if (pos.IsValid()) {
+        set_of_pos.insert(pos);
       } else {
         continue;
       }

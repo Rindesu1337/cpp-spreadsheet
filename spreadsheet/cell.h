@@ -12,92 +12,75 @@ class Sheet;
 
 class Cell : public CellInterface {
 public:
-  Cell(SheetInterface &sheet, Position pos);
-  Cell(SheetInterface &sheet, Position pos, std::string text);
+  Cell(Sheet &sheet, Position Position);
+
   virtual ~Cell() override = default;
 
   void Set(std::string text);
   void Clear();
+
   Value GetValue() const override;
   std::string GetText() const override;
+
   std::vector<Position> GetReferencedCells() const override;
-  bool IsReferenced() const;
-  void ClearCache();
 
 private:
   // можете воспользоваться нашей подсказкой, но это необязательно.
-  /*    class Impl;
-      class EmptyImpl;
-      class TextImpl;
-      class FormulaImpl;
-      std::unique_ptr<Impl> impl_;
-  */
   class Impl {
   public:
-    virtual ~Impl() = default;
-
     virtual Value GetValue() const = 0;
     virtual std::string GetText() const = 0;
     virtual std::vector<Position> GetReferencedCells() const = 0;
+    virtual bool IsCacheValid() const;
+    virtual void InvalidateCache() const;
   };
 
-  class FormulaImpl : public Impl {
+  class TextImpl final : public Impl {
   public:
-    FormulaImpl(std::string text, const SheetInterface &sheet);
-    virtual ~FormulaImpl() override = default;
+    TextImpl(std::string text);
 
     virtual Value GetValue() const override;
     virtual std::string GetText() const override;
     std::vector<Position> GetReferencedCells() const override;
+
+  private:
+    std::string text_;
+  };
+
+  class FormulaImpl final : public Impl {
+  public:
+    FormulaImpl(std::string text, const SheetInterface &sheet);
+
+    virtual Value GetValue() const override;
+    virtual std::string GetText() const override;
+    std::vector<Position> GetReferencedCells() const override;
+    virtual bool IsCacheValid() const override;
+    virtual void InvalidateCache() const override;
 
   private:
     const SheetInterface &sheet_;
-    std::unique_ptr<FormulaInterface> value_;
+    std::unique_ptr<FormulaInterface> formula_;
+    mutable std::optional<FormulaInterface::Value> cache_;
   };
 
-  class EmptyImpl : public Impl {
+  class EmptyImpl final : public Impl {
   public:
-    EmptyImpl() = default;
-    virtual ~EmptyImpl() override = default;
-
     virtual Value GetValue() const override;
     virtual std::string GetText() const override;
     std::vector<Position> GetReferencedCells() const override;
   };
 
-  class TextImpl : public Impl {
-  public:
-    TextImpl(std::string text);
-    virtual ~TextImpl() override = default;
+  Sheet &sheet_;
 
-    virtual Value GetValue() const override;
-    virtual std::string GetText() const override;
-    std::vector<Position> GetReferencedCells() const override;
-
-  private:
-    std::string value_;
-  };
-
-private:
-  bool CheckCyclicality(
-      std::unique_ptr<Impl> &impl) const; // Проверка циклической зависимости
-  bool IsCyclic(const Positions &dependents, Positions &viewed) const;
-
-  void RemoveOldDependents();
-  void AddNewDependents(const Positions &new_dependents);
-  void AddReferencedCells(const std::vector<Position> &new_refs);
-  void ResetCacheDependents();
-
-private:
-  SheetInterface &sheet_;
-
-  Position pos_;
   std::unique_ptr<Impl> impl_; // Значение ячейки таблицы
+  std::unordered_set<Cell *> dependent_cells_;
+  std::unordered_set<Cell *> referenced_cells_;
 
-  Positions dependents_; // кто ссылается на ячейку std::unordered_set<Position,
-                         // PositionHasher>
-  Positions includes_; // на кого указывает ячейка  std::unordered_set<Position,
-                       // PositionHasher>
+  void NewReference(const std::vector<Position> &new_dependents);
+  void InvalidCache();
+  bool CircularDependency(std::unique_ptr<Cell::Impl> &impl)
+      const; // Проверка циклической зависимости
+  bool DFS(const PositionsSet &dependents, PositionsSet &verified) const;
 
-  mutable std::optional<Value> cache_;
+  Position position_;
 };

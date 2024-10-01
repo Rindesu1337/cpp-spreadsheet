@@ -13,14 +13,12 @@ void Sheet::SetCell(Position pos, std::string text) {
   if (!pos.IsValid())
     throw InvalidPositionException("Sheet::SetCell: Invalid position");
 
-  if (!text.empty()) {
-    positions_.insert(pos);
-  }
-
-  if (!table_.count(pos)) {
-    table_[pos] = std::make_unique<Cell>(*this, pos, std::move(text));
+  if (!cells_.count(pos)) {
+    std::unique_ptr<Cell> cell = std::make_unique<Cell>(*this, pos);
+    cell -> Set(std::move(text));
+    cells_[pos] = std::move(cell);
   } else {
-    table_[pos]->Set(std::move(text));
+    cells_[pos]->Set(std::move(text));
   }
 }
 
@@ -31,7 +29,7 @@ bool Sheet::IsCellAvailable(Position pos) const {
 }
 
 const CellInterface *Sheet::GetCell(Position pos) const {
-  return const_cast<Sheet *>(this)->GetCell(pos);
+  return const_cast<Sheet*>(this)->GetCell(pos);
 }
 
 CellInterface *Sheet::GetCell(Position pos) {
@@ -39,15 +37,34 @@ CellInterface *Sheet::GetCell(Position pos) {
     throw InvalidPositionException("Sheet::GetCell: Invalid position");
 
   if (IsCellAvailable(pos)) {
-    if (!table_.count(pos)) {
+    if (!cells_.count(pos)) {
       SetCell(pos, std::string());
     }
 
-    return table_.at(pos).get();
+    return cells_.at(pos).get();
   } else {
     return nullptr;
   }
 }
+
+const Cell* Sheet::GetConcreteCell(Position pos) const {
+  return const_cast<Sheet*>(this)->GetConcreteCell(pos);
+} 
+
+Cell* Sheet::GetConcreteCell(Position pos){
+  if (!pos.IsValid())
+    throw InvalidPositionException("Sheet::GetConcreteCell: Invalid position");
+
+  if (IsCellAvailable(pos)) {
+    if (!cells_.count(pos)) {
+      return nullptr;
+    }
+
+    return cells_.at(pos).get();
+  } else {
+    return nullptr;
+  }
+} 
 
 void Sheet::ClearCell(Position pos) {
   if (!pos.IsValid()) {
@@ -56,13 +73,12 @@ void Sheet::ClearCell(Position pos) {
   if (IsCellAvailable(pos)) {
     SetCell(pos, std::string());
   } else {
-    table_.erase(pos);
+    cells_.erase(pos);
   }
-  positions_.erase(pos);
 }
 
 Size Sheet::GetPrintableSize() const {
-  if (table_.empty()) {
+  if (cells_.empty()) {
     return Size{}; // Если таблица пуста, возвращаем размер (0, 0)
   }
 
@@ -74,7 +90,7 @@ Size Sheet::GetPrintableSize() const {
 
   bool has_non_empty_cells = false;
 
-  for (const auto &[position, cell_ptr] : table_) {
+  for (const auto &[position, cell_ptr] : cells_) {
     if (cell_ptr &&
         !cell_ptr->GetText()
              .empty()) { // Учитываем только ячейки с непустым текстом
@@ -102,14 +118,14 @@ void Sheet::PrintValues(std::ostream &output) const {
         output << '\t';
       }
       Position pos{y, x};
-      if (table_.count(pos) > 0) {
-        if (std::holds_alternative<double>(table_.at(pos)->GetValue())) {
-          output << std::get<double>(table_.at(pos)->GetValue());
+      if (cells_.count(pos) > 0) {
+        if (std::holds_alternative<double>(cells_.at(pos)->GetValue())) {
+          output << std::get<double>(cells_.at(pos)->GetValue());
         } else if (std::holds_alternative<std::string>(
-                       table_.at(pos)->GetValue())) {
-          output << std::get<std::string>(table_.at(pos)->GetValue());
+                       cells_.at(pos)->GetValue())) {
+          output << std::get<std::string>(cells_.at(pos)->GetValue());
         } else {
-          output << std::get<FormulaError>(table_.at(pos)->GetValue());
+          output << std::get<FormulaError>(cells_.at(pos)->GetValue());
         }
       }
     }
@@ -124,8 +140,8 @@ void Sheet::PrintTexts(std::ostream &output) const {
         output << '\t';
       }
       Position pos{y, x};
-      if (table_.count(pos) > 0) {
-        output << table_.at(pos)->GetText();
+      if (cells_.count(pos) > 0) {
+        output << cells_.at(pos)->GetText();
       }
     }
 

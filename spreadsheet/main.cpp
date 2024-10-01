@@ -339,6 +339,7 @@ void TestCellCircularReferences() {
     bool caught = false;
     try {
         sheet->SetCell("M6"_pos, "=E2");
+        //sheet->SetCell("A1"_pos, "=A1");
     } catch (const CircularDependencyException&) {
         caught = true;
     }

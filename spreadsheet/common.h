@@ -35,7 +35,7 @@ struct PositionHasher {
     }
 };
 
-using Positions = std::unordered_set<Position, PositionHasher>;
+using PositionsSet = std::unordered_set<Position, PositionHasher>;
 
 struct Size {
     int rows = 0;
