@@ -148,18 +148,20 @@ public:
 
   double Evaluate(std::function<double(Position)> &args) const override {
     // Скопируйте ваше решение из предыдущих уроков.
+    auto lhs_value = lhs_->Evaluate(args);
+    auto rhs_value = rhs_->Evaluate(args); 
     if (type_ == Add &&
-        std::isfinite(lhs_->Evaluate(args) + rhs_->Evaluate(args))) {
-      return lhs_->Evaluate(args) + rhs_->Evaluate(args);
+        std::isfinite(lhs_value + rhs_value)) {
+      return lhs_value + rhs_value;
     } else if (type_ == Subtract &&
-               std::isfinite(lhs_->Evaluate(args) - rhs_->Evaluate(args))) {
-      return lhs_->Evaluate(args) - rhs_->Evaluate(args);
+               std::isfinite(lhs_value - rhs_value)) {
+      return lhs_value - rhs_value;
     } else if (type_ == Multiply &&
-               std::isfinite(lhs_->Evaluate(args) * rhs_->Evaluate(args))) {
-      return lhs_->Evaluate(args) * rhs_->Evaluate(args);
+               std::isfinite(lhs_value * rhs_value)) {
+      return lhs_value * rhs_value;
     } else if (type_ == Divide &&
-               std::isfinite(lhs_->Evaluate(args) / rhs_->Evaluate(args))) {
-      return lhs_->Evaluate(args) / rhs_->Evaluate(args);
+               std::isfinite(lhs_value / rhs_value)) {
+      return lhs_value / rhs_value;
     } else {
       throw FormulaError(FormulaError::Category::Arithmetic);
     }
@@ -198,10 +200,13 @@ public:
 
   double Evaluate(std::function<double(Position)> &args) const override {
     // Скопируйте ваше решение из предыдущих уроков.
-    if (type_ == UnaryMinus)
+    if (type_ == UnaryMinus) {
       return -operand_->Evaluate(args);
-    else
+    } else if (type_ == UnaryPlus) {
       return operand_->Evaluate(args);
+    } else {
+      assert(false);
+    }
   }
 
 private:

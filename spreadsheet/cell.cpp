@@ -10,7 +10,7 @@ void Cell::Set(std::string text) {
 
   if (text.empty()) {
     temp_impl = std::make_unique<EmptyImpl>();
-  } else if (text.size() >= 2 && text.at(0) == FORMULA_SIGN) {
+  } else if (text.size() > 1 && text.at(0) == FORMULA_SIGN) {
     temp_impl = std::make_unique<FormulaImpl>(std::move(text), sheet_);
   } else {
     temp_impl = std::make_unique<TextImpl>(std::move(text));
@@ -39,6 +39,9 @@ void Cell::NewReference(const std::vector<Position> &new_dependents) {
   if (!new_dependents.empty()) {
     for (auto &&pos : new_dependents) {
       Cell *cell = sheet_.GetConcreteCell(pos);
+      if (cell == nullptr) {
+        sheet_.SetCell(pos, "");
+      }
       referenced_cells_.insert(cell);
     }
   }
@@ -92,7 +95,7 @@ bool Cell::DFS(const PositionsSet &dependents,
   for (Position pos : dependents) {
     if (pos.IsValid() && !verified.count(pos)) {
       verified.insert(pos);
-      auto cell = sheet_.GetCell(pos);
+      auto cell = sheet_.GetConcreteCell(pos);
       if (cell) {
         auto ref = cell->GetReferencedCells();
         if (DFS({ref.begin(), ref.end()}, verified)) {

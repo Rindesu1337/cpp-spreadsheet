@@ -24,27 +24,15 @@ void Sheet::SetCell(Position pos, std::string text) {
 
 bool Sheet::IsCellAvailable(Position pos) const {
   Size size_area = GetPrintableSize();
-  return pos.IsValid() ? pos.row < size_area.rows && pos.col < size_area.cols
-                       : false;
+  return pos.row < size_area.rows && pos.col < size_area.cols;
 }
 
 const CellInterface *Sheet::GetCell(Position pos) const {
-  return const_cast<Sheet*>(this)->GetCell(pos);
+  return GetConcreteCell(pos);
 }
 
 CellInterface *Sheet::GetCell(Position pos) {
-  if (!pos.IsValid())
-    throw InvalidPositionException("Sheet::GetCell: Invalid position");
-
-  if (IsCellAvailable(pos)) {
-    if (!cells_.count(pos)) {
-      SetCell(pos, std::string());
-    }
-
-    return cells_.at(pos).get();
-  } else {
-    return nullptr;
-  }
+  return GetConcreteCell(pos);
 }
 
 const Cell* Sheet::GetConcreteCell(Position pos) const {
@@ -55,11 +43,7 @@ Cell* Sheet::GetConcreteCell(Position pos){
   if (!pos.IsValid())
     throw InvalidPositionException("Sheet::GetConcreteCell: Invalid position");
 
-  if (IsCellAvailable(pos)) {
-    if (!cells_.count(pos)) {
-      return nullptr;
-    }
-
+  if (IsCellAvailable(pos) && cells_.count(pos)) {
     return cells_.at(pos).get();
   } else {
     return nullptr;
@@ -71,10 +55,8 @@ void Sheet::ClearCell(Position pos) {
     throw InvalidPositionException("Sheet::ClearCell: Invalid position");
   }
   if (IsCellAvailable(pos)) {
-    SetCell(pos, std::string());
-  } else {
-    cells_.erase(pos);
-  }
+    cells_.at(pos)->Clear();
+  } 
 }
 
 Size Sheet::GetPrintableSize() const {
